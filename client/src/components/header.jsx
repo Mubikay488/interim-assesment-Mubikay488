@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import Logo from './ui/Logo';
@@ -234,7 +234,8 @@ const DropdownContent = ({ menuKey }) => {
 
 /* ── Header ── */
 const Header = () => {
-	const { user } = useAuth();
+	const { user, logout } = useAuth();
+	const navigate = useNavigate();
 	const [activeMenu, setActiveMenu]   = useState(null);
 	const [searchActive, setSearchActive] = useState(false);
 	const [searchQuery, setSearchQuery]   = useState('');
@@ -353,13 +354,24 @@ const Header = () => {
 							</div>
 
 							{user ? (
+							<div className="flex items-center gap-2">
 							<Link
 								to="/dashboard"
 								className="inline-flex items-center justify-center rounded-full font-semibold transition-all duration-200 bg-blue-60 text-white hover:opacity-90 px-4 py-2 text-label-1 whitespace-nowrap"
 							>
 								Dashboard
 							</Link>
-						) : (
+							<button
+								onClick={async () => {
+								await logout();
+								navigate('/');
+							}}
+								className="inline-flex items-center justify-center rounded-full border border-gray-10 bg-white text-gray-110 hover:bg-gray-100 transition-all duration-200 px-4 py-2 text-label-1 whitespace-nowrap"
+							>
+								Logout
+							</button>
+						</div>
+					) : (
 							<>
 								<Link
 									to="/signin"

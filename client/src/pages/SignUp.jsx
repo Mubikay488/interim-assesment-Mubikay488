@@ -478,15 +478,15 @@ const StepVerifyEmail = ({ email, onVerify, onResend, error, loading, devOtp }) 
 	return (
 		<Shell>
 			{devOtp && !otpDismissed && (
-				<div className="mb-5 rounded-xl border border-yellow-400/40 bg-yellow-400/10 px-4 py-3 flex items-start gap-3">
+				<div className="mb-5 rounded-xl border border-[#7FB8FF]/40 bg-[#7FB8FF]/10 px-4 py-3 flex items-start gap-3">
 					<svg className="mt-0.5 shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none">
 						<circle cx="12" cy="12" r="10" stroke="#FBBF24" strokeWidth="2"/>
 						<path d="M12 8v4m0 4h.01" stroke="#FBBF24" strokeWidth="2" strokeLinecap="round"/>
 					</svg>
 					<div className="flex-1 min-w-0">
-						<p className="text-[0.8125rem] font-semibold text-yellow-300 mb-0.5">Dev mode — your OTP</p>
-						<p className="text-[1.5rem] font-bold tracking-[0.35em] text-yellow-200 font-mono">{devOtp}</p>
-						<p className="text-[0.75rem] text-yellow-400/70 mt-1">This banner only appears outside production.</p>
+						<p className="text-[0.8125rem] font-semibold text-[#7FB8FF] mb-0.5">Dev mode — your OTP</p>
+						<p className="text-[1.5rem] font-bold tracking-[0.35em] text-[#A5D0FF] font-mono">{devOtp}</p>
+						<p className="text-[0.75rem] text-[#9CC8FF] mt-1">This banner only appears outside production.</p>
 					</div>
 					<button onClick={() => setOtpDismissed(true)} className="text-yellow-400/60 hover:text-yellow-300 transition-colors text-lg leading-none mt-0.5">✕</button>
 				</div>
@@ -892,7 +892,7 @@ const clearSession = () => sessionStorage.removeItem(SS_KEY);
 
 const SignUp = () => {
 	const saved = loadSession();
-	const [step, setStep] = useState(saved.step ?? 0);
+	const [step, setStep] = useState(saved.step === 2 && !saved.userId ? 0 : saved.step ?? 0);
 	const [name, setName] = useState(saved.name ?? '');
 	const [email, setEmail] = useState(saved.email ?? '');
 	const [password, setPassword] = useState('');
@@ -908,6 +908,14 @@ const SignUp = () => {
 	const [birthCity, setBirthCity] = useState('');
 	const [birthCountry, setBirthCountry] = useState('GH');
 	const [addressFile, setAddressFile] = useState(null);
+
+	useEffect(() => {
+		if (step === 2 && !userId) {
+			clearSession();
+			setStep(0);
+			setRegisterError('Your signup session expired or is incomplete. Please start again.');
+		}
+	}, [step, userId]);
 
 	const goTo = (s) => {
 		setStep(s);
@@ -941,6 +949,10 @@ const SignUp = () => {
 	};
 
 	const handleVerifyOtp = async (otp) => {
+		if (!userId) {
+			setOtpError('Unable to verify. Please restart signup.');
+			return;
+		}
 		setOtpError('');
 		setOtpLoading(true);
 		try {
@@ -961,11 +973,26 @@ const SignUp = () => {
 	};
 
 	const handleResendOtp = async () => {
-		await fetch(`${API_BASE}/api/auth/resend-otp`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ userId }),
-		});
+		if (!userId) {
+			setOtpError('Unable to resend code. Please restart signup.');
+			return;
+		}
+		setOtpError('');
+		try {
+			const res = await fetch(`${API_BASE}/api/auth/resend-otp`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ userId }),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				setOtpError(data.message || 'Unable to resend code');
+				return;
+			}
+			if (data.devOtp) setDevOtp(data.devOtp);
+		} catch {
+			setOtpError('Network error. Please try again.');
+		}
 	};
 
 	const handleKycComplete = async () => {

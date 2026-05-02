@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import RefreshToken from "../models/RefreshToken.js";
 
+const generateOtp = () => String(Math.floor(100000 + Math.random() * 900000));
+
 // REGISTER
 export const registerUser = async (req, res) => {
   try {
@@ -19,21 +21,22 @@ export const registerUser = async (req, res) => {
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const otp = generateOtp();
 
-    // Create user
+    // Create user with a demo verification code
     const user = await User.create({
       name,
       email,
       passwordHash: hashedPassword,
+      emailOtp: otp,
+      emailOtpExpires: new Date(Date.now() + 15 * 60 * 1000),
+      isEmailVerified: false,
     });
 
     res.status(201).json({
-      message: "Registration successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+      message: "Registration successful. Verification code generated.",
+      userId: user._id,
+      devOtp: otp,
     });
   } catch (error) {
     res.status(500).json({
@@ -53,6 +56,12 @@ export const loginUser = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         message: "Invalid email or password",
+      });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        message: "Please verify your email before logging in.",
       });
     }
 
@@ -81,8 +90,12 @@ export const loginUser = async (req, res) => {
       },
     );
 
-    // Save refresh token
-    await RefreshToken.create({ token: refreshToken, user: user._id });
+    // Save refresh token document with required fields
+    await RefreshToken.create({
+      userId: user._id,
+      token: refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
     // Set refresh token in httpOnly cookie
     res.cookie("refreshToken", refreshToken, {
@@ -105,6 +118,70 @@ export const loginUser = async (req, res) => {
     res.status(500).json({
       message: error.message,
     });
+  }
+};
+
+// VERIFY EMAIL OTP
+export const verifyEmail = async (req, res) => {
+  try {
+    const { userId, otp } = req.body;
+    if (!userId) {
+      return res.status(400).json({ message: "Missing userId" });
+    }
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(200).json({ message: "Email already verified" });
+    }
+
+    if (!user.emailOtp || user.emailOtp !== otp) {
+      return res.status(422).json({ message: "Invalid verification code" });
+    }
+
+    if (!user.emailOtpExpires || user.emailOtpExpires < new Date()) {
+      return res.status(422).json({ message: "Verification code expired" });
+    }
+
+    user.isEmailVerified = true;
+    user.emailOtp = undefined;
+    user.emailOtpExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Email verified successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// RESEND EMAIL OTP
+export const resendOtp = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ message: "Missing userId" });
+    }
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ message: "Email already verified" });
+    }
+
+    const otp = generateOtp();
+    user.emailOtp = otp;
+    user.emailOtpExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+
+    res.status(200).json({ message: "Verification code resent", devOtp: otp });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
