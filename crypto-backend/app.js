@@ -22,7 +22,7 @@ const app = express();
 const normalizeOrigin = (origin) => origin?.trim().replace(/\/$/, "");
 const allowedOrigins = (
   process.env.CLIENT_URL ||
-  "http://localhost:5173,https://interim-assesment-mubikay488-9am4ccaeg-mubikay488s-projects.vercel.app"
+  "http://localhost:5173,https://interim-assesment-mubikay488.vercel.app"
 )
   .split(",")
   .map((o) => normalizeOrigin(o))

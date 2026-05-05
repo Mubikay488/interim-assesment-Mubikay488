@@ -13,7 +13,9 @@ dotenv.config();
 const app = express();
 
 const normalizeOrigin = (origin) => origin?.trim().replace(/\/$/, "");
-const allowedOrigins = (process.env.CLIENT_URL || "")
+const allowedOrigins = (
+  process.env.CLIENT_URL || "https://interim-assesment-mubikay488.vercel.app"
+)
   .split(",")
   .map(normalizeOrigin)
   .filter(Boolean);

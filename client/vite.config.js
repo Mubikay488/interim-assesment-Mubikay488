@@ -6,7 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const apiTarget =
-    env.VITE_API_URL || "https://interim-assesment-mubikay488.onrender.com";
+    env.VITE_API_URL || "https://interim-assesment-mubikay488-1.onrender.com";
 
   const proxyEntry = () => ({
     target: apiTarget,
