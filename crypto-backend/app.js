@@ -19,7 +19,10 @@ const { body } = require("express-validator");
 
 const app = express();
 
-const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+const allowedOrigins = (
+  process.env.CLIENT_URL ||
+  "http://localhost:5173,https://interim-assesment-mubikay488-9am4ccaeg-mubikay488s-projects.vercel.app/"
+)
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
