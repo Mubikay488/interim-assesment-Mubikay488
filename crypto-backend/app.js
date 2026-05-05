@@ -19,19 +19,21 @@ const { body } = require("express-validator");
 
 const app = express();
 
+const normalizeOrigin = (origin) => origin?.trim().replace(/\/$/, "");
 const allowedOrigins = (
   process.env.CLIENT_URL ||
-  "http://localhost:5173,https://interim-assesment-mubikay488-9am4ccaeg-mubikay488s-projects.vercel.app/"
+  "http://localhost:5173,https://interim-assesment-mubikay488-9am4ccaeg-mubikay488s-projects.vercel.app"
 )
   .split(",")
-  .map((o) => o.trim())
+  .map((o) => normalizeOrigin(o))
   .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
+      const normalizedOrigin = normalizeOrigin(origin);
       // allow server-to-server / curl (no origin header) and whitelisted origins
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(normalizedOrigin)) {
         callback(null, origin || true);
       } else {
         callback(new Error(`CORS: origin ${origin} not allowed`));

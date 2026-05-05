@@ -12,12 +12,25 @@ dotenv.config();
 
 const app = express();
 
+const normalizeOrigin = (origin) => origin?.trim().replace(/\/$/, "");
+const allowedOrigins = (process.env.CLIENT_URL || "")
+  .split(",")
+  .map(normalizeOrigin)
+  .filter(Boolean);
+
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+      const normalized = normalizeOrigin(origin);
+      if (!origin || allowedOrigins.includes(normalized)) {
+        callback(null, origin || true);
+      } else {
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      }
+    },
     credentials: true,
   }),
 );
@@ -27,9 +40,12 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/crypto", cryptoRoutes);
 
-// Test route
+// Test routes
 app.get("/", (req, res) => {
   res.send("API is running...");
+});
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" });
 });
 
 // Start server
